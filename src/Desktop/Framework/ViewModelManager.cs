@@ -1,46 +1,101 @@
-﻿using Desktop.ViewModels;
-using Desktop.ViewModels.Components;
-using Desktop.ViewModels.Dialogs;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Desktop.Framework;
 
 public class ViewModelManager
 {
-    private readonly IServiceProvider _serviveProvider;
-    public ViewModelManager(IServiceProvider serviveProvider)
+    private readonly Stack<ViewModelBase> _navigationStack = new Stack<ViewModelBase>();
+    private readonly ViewModelFactory _viewModelFactory;
+    private readonly SemaphoreSlim _semaphore;
+    private readonly ILogger<ViewModelManager> _logger;
+
+    private event Action<ViewModelBase>? _onViewModelChanged;
+
+    public ViewModelManager(ViewModelFactory viewModelFactory, ILogger<ViewModelManager> logger)
     {
-        _serviveProvider = serviveProvider;
+        _viewModelFactory = viewModelFactory;
+        _semaphore = new SemaphoreSlim(1, 1);
+        _logger = logger;
     }
 
-    public ListViewModel CreateListViewModel()
+    public async void NavigateTo<TViewModel>(params object[] parameters)
+        where TViewModel : ViewModelBase
     {
-        return _serviveProvider
-            .GetRequiredService<ListViewModel>();
+        if (_navigationStack.Any() && _navigationStack
+            .Peek()
+            .GetType() == typeof(TViewModel))
+        {
+            return;
+        }
+
+        _logger.LogInformation("Attempting to navigate to {ViewModelName} with parameters {Parameters}.",
+            typeof(TViewModel).Name, parameters);
+
+        await _semaphore.WaitAsync();
+        try
+        {
+
+            var viewModel = _viewModelFactory.Create<TViewModel>(parameters);
+
+            _navigationStack.Push(viewModel);
+
+            _logger.LogInformation("{ViewModelName} created and added to the navigation stack.", typeof(TViewModel).Name);
+            _onViewModelChanged?.Invoke(viewModel);
+            _logger.LogInformation("Content changed to {ViewModelName}.", typeof(TViewModel).Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to navigate to {ViewModelName}.", typeof(TViewModel).Name);
+            throw;
+        }
+        finally
+        {
+            _semaphore.Release();
+            _logger.LogInformation("Semaphore released after navigation.");
+        }
     }
 
-    public MainViewModel CreateMainViewModel()
+    public async void NavigateBack()
     {
-        return _serviveProvider
-            .GetRequiredService<MainViewModel>();
-    } 
+        _logger.LogInformation("Attempting to navigate back.");
 
-    public MessageBoxViewModel CreateMessageBoxViewModel(
-        string title,
-        string message,
-        string? okButtonText,
-        string? cancelButtonText)
-    {
-        var viewModel = _serviveProvider
-            .GetRequiredService<MessageBoxViewModel>();
-
-        viewModel.Title = title;
-        viewModel.Message = message;
-        viewModel.DefaultButtonText = okButtonText;
-        viewModel.CancelButtonText = cancelButtonText;
-
-        return viewModel;
+        await _semaphore.WaitAsync();
+        try
+        {
+            if (_navigationStack.Count > 1)
+            {
+                _navigationStack.Pop();
+                var previousViewModel = _navigationStack.Peek();
+                _logger.LogInformation("Navigated back to {ViewModelName}.", previousViewModel.GetType().Name);
+                _onViewModelChanged?.Invoke(previousViewModel);
+            }
+            else
+            {
+                _logger.LogWarning("Navigation stack has only one item. Cannot navigate back further.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while navigating back.");
+            throw;
+        }
+        finally
+        {
+            _semaphore.Release();
+            _logger.LogInformation("Semaphore released after navigating back.");
+        }
     }
 
-    public MessageBoxViewModel CreateMessageBoxViewModel(string title, string message) =>
-        CreateMessageBoxViewModel(title, message, "CLOSE", null);}
+    public void SubscribeOnViewModelChanged(Action<ViewModelBase> viewModelChanged)
+    {
+        _logger.LogInformation("Subscribing to view model changes.");
+        _onViewModelChanged += viewModelChanged;
+    }
+
+    public void UnsubscribeOnViewModelChanged(Action<ViewModelBase> viewModelChanged)
+    {
+        _logger.LogInformation("Unsubscribing from view model changes.");
+        _onViewModelChanged -= viewModelChanged;
+    }
+}
+

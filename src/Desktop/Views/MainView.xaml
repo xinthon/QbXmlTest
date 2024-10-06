@@ -7,11 +7,11 @@
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:system="clr-namespace:System;assembly=System.Runtime"
-    Style="{DynamicResource MaterialDesignWindow}"
     Width="800"
     Height="450"
     mc:Ignorable="d"
-    Title="MainView">
+    Style="{DynamicResource MaterialDesignWindow}"
+    Title="{Binding Title}">
     <materialDesign:DialogHost DialogTheme="Inherit">
         <materialDesign:DialogHost.DialogContent>
             <StackPanel Margin="16">
@@ -46,9 +46,15 @@
             </StackPanel>
         </materialDesign:DialogHost.DialogContent>
         <Grid>
-            <Button Width="200" Command="{Binding ShowMessageCommand}" Content="Click me">
-                
-            </Button> 
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <Button
+                Width="200"
+                Command="{Binding ShowMessageCommand}"
+                Content="Click me" />
+            <ContentControl Grid.Column="1" Content="{Binding ActiveView}" />
         </Grid>
     </materialDesign:DialogHost>
 </Window>

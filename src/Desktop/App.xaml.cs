@@ -38,6 +38,7 @@ public partial class App : System.Windows.Application
         services.AddInfrastructure();
 
         // Frameworkd
+        services.AddSingleton<ViewModelFactory>();
         services.AddSingleton<DialogManager>();
         services.AddSingleton<ViewManager>();
         services.AddSingleton<ViewModelManager>();
@@ -45,7 +46,7 @@ public partial class App : System.Windows.Application
 
         // ViewModels
         services.AddTransient<MainViewModel>();
-        services.AddTransient<ListViewModel>();
+        services.AddTransient<TableViewModel>();
         services.AddTransient<MessageBoxViewModel>();
     }
 
@@ -58,8 +59,8 @@ public partial class App : System.Windows.Application
         {
             DataContext = _container
                 .Services
-                .GetRequiredService<ViewModelManager>()
-                .CreateMainViewModel()
+                .GetRequiredService<ViewModelFactory>()
+                .Create<MainViewModel>()
         };
         rootView.Show();
     }
