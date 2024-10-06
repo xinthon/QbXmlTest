@@ -1,4 +1,9 @@
 ﻿using Application;
+using Desktop.Framework;
+using Desktop.ViewModels;
+using Desktop.ViewModels.Components;
+using Desktop.ViewModels.Dialogs;
+using Desktop.Views;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,11 +37,16 @@ public partial class App : System.Windows.Application
         services.AddApplication();
         services.AddInfrastructure();
 
-        services.AddSingleton<MainWindowViewModel>();
-        services.AddSingleton(s => new MainWindow()
-        {
-            DataContext = s.GetRequiredService<MainWindowViewModel>()
-        });
+        // Frameworkd
+        services.AddSingleton<DialogManager>();
+        services.AddSingleton<ViewManager>();
+        services.AddSingleton<ViewModelManager>();
+
+
+        // ViewModels
+        services.AddTransient<MainViewModel>();
+        services.AddTransient<ListViewModel>();
+        services.AddTransient<MessageBoxViewModel>();
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -44,8 +54,13 @@ public partial class App : System.Windows.Application
         await _container
             .StartAsync();
 
-        var rootView = _container.Services
-            .GetRequiredService<MainWindow>();
+        var rootView = new MainView()
+        {
+            DataContext = _container
+                .Services
+                .GetRequiredService<ViewModelManager>()
+                .CreateMainViewModel()
+        };
         rootView.Show();
     }
 
