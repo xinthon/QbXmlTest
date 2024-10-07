@@ -1,7 +1,9 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Application.Infrastructure.Workers;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Desktop.Framework;
 using Desktop.ViewModels.Components;
+using Microsoft.Extensions.Hosting;
 using System.Windows.Controls;
 
 namespace Desktop.ViewModels;
@@ -16,19 +18,35 @@ public partial class MainViewModel : ViewModelBase
     private readonly DialogManager _dialogManager;
     private readonly ViewModelManager _viewModelManager;
     private readonly ViewManager _viewManager;
-
-    public MainViewModel(DialogManager dialogManager, ViewModelManager viewModelManager, ViewManager viewManager)
+    private readonly IHostedService _hostedService;
+    public MainViewModel(
+        DialogManager dialogManager, 
+        ViewModelManager viewModelManager, 
+        ViewManager viewManager, 
+        IHostedService hostedService)
     {
         _dialogManager = dialogManager;
         _viewModelManager = viewModelManager;
-        _viewModelManager.SubscribeOnViewModelChanged(OnViewModelChanged);
         _viewManager = viewManager;
+        _hostedService = hostedService;
+
+        _viewModelManager.SubscribeOnViewModelChanged(OnViewModelChanged);
+        _viewModelManager.NavigateTo<TableViewModel>();
     }
 
     [RelayCommand]
-    private async Task ShowMessage()
+    private async Task StopService()
     {
-        _viewModelManager.NavigateTo<TableViewModel>();
+        await _hostedService
+            .StopAsync(CancellationToken.None);
+        await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private async Task StartService()
+    {
+        await _hostedService
+            .StartAsync(CancellationToken.None);
         await Task.CompletedTask;
     }
 
