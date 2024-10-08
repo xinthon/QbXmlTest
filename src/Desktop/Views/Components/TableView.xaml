@@ -10,32 +10,26 @@
     d:DesignWidth="800">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="220" />
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="65" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition />
             </Grid.RowDefinitions>
-            <TextBlock
-                Margin="20 0"
-                VerticalAlignment="Center"
-                FontSize="24"
-                Text="List" />
-            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Hidden">
+            
+            <ScrollViewer Margin="0 0 10 0" Grid.Row="2" VerticalScrollBarVisibility="Hidden">
                 <ItemsControl ItemsSource="{Binding MenuCollection}" ScrollViewer.VerticalScrollBarVisibility="Auto">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="ListViewItem">
                             <Button
                                 Style="{DynamicResource MaterialDesignFlatButton}"
-                                Width="280"
-                                Height="40"
+                                Width="Auto"
                                 HorizontalContentAlignment="Left"
                                 VerticalAlignment="Center"
                                 Content="{Binding Name}"
-                                Command="{Binding NavigateCommand}"
-                                Padding="20 0" />
+                                Command="{Binding NavigateCommand}"/>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -44,6 +38,7 @@
         <DataGrid
             Grid.Column="1"
             AutoGenerateColumns="True"
+            HorizontalScrollBarVisibility="Auto"
             ItemsSource="{Binding ItemCollection}" />
     </Grid>
 </UserControl>

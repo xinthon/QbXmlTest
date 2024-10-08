@@ -31,7 +31,6 @@ public class UnhandledExceptionBehaviour<TRequest, TResponse>
                 "Request: Unhandled Exception for Request {Name} {@Request}", 
                 requestName, 
                 request);
-
             throw;
         }
     }

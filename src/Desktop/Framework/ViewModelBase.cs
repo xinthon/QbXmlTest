@@ -2,7 +2,7 @@
 
 namespace Desktop.Framework;
 
-public class ViewModelBase : ObservableObject, IDisposable
+public abstract class ViewModelBase : ObservableObject, IDisposable
 {
     ~ViewModelBase() => Dispose(false);
 

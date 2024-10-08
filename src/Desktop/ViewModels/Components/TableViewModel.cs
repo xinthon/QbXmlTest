@@ -12,43 +12,48 @@ using Application.Features.Qb.Queries.GetQbList;
 
 namespace Desktop.ViewModels.Components;
 
-public partial class NavBarItemViewModel : ViewModelBase
+public partial class QbListNavBarViewModel<TQbRequest, TQbResponse> : ViewModelBase
+    where TQbRequest : class, IQbRequest where TQbResponse : IQbResponse
 {
-    [RelayCommand]
-    public void Navigate() => _callBack?
-        .Invoke(_value);
-
-    private readonly Action<System.Type> _callBack;
-
-    private readonly System.Type _value;
-
-    public NavBarItemViewModel(string name, System.Type value, Action<System.Type> callBack)
+    private readonly Action<QbListNavBarViewModel<TQbRequest, TQbResponse>> _callBack;
+    public QbListNavBarViewModel(string name, Action<QbListNavBarViewModel<TQbRequest, TQbResponse>> callBack)
     {
         _name = name;
-        _value = value;
-        _callBack = callBack; 
+        _callBack = callBack;
     }
 
     [ObservableProperty]
     private string _name;
+
+    [RelayCommand]
+    public void Navigate() => _callBack?.Invoke(this);
 }
 
-public partial class QbListNavBarViewModel<TQbRequest, TQbResponse> : ViewModelBase
-    where TQbRequest : IQbRequest where TQbResponse : IQbResponse
+public partial class QbListNavBarViewModel : ViewModelBase
 {
-    private readonly Action<QbListNavBarViewModel<TQbRequest, TQbResponse>> _callBack;
+    private readonly Action<object> _callBack;
+    private readonly object _query;
+    public QbListNavBarViewModel(string name, object query, Action<object> callBack)
+    {
+        _name = name;
+        _query = query; 
+        _callBack = callBack;
+    }
 
     [ObservableProperty]
     private string _name;
+
+    [RelayCommand]
+    public void Navigate() => _callBack?.Invoke(_query);
 }
 
 public partial class TableViewModel : ViewModelBase
 {
-    private readonly ObservableCollection<object>  _itemCollection =
+    private readonly ObservableCollection<object> _itemCollection =
         new ObservableCollection<object>();
 
-    private readonly ObservableCollection<NavBarItemViewModel> _menuCollection = 
-        new ObservableCollection<NavBarItemViewModel>();
+    private readonly ObservableCollection<object> _menuCollection =
+        new ObservableCollection<object>();
 
     private readonly IQbXmlRequestProcessor _requestProcessor;
     private readonly ISender _sender;
@@ -56,49 +61,136 @@ public partial class TableViewModel : ViewModelBase
     {
         _requestProcessor = requestProcessor;
         _sender = sender;
+        InitializeMenuBars();
+    }
 
-        var types = typeof(QbXmlRequest)
+    private void InitializeMenuBars()
+    {
+        var assemblyTypes = typeof(QbXmlRequest)
             .Assembly
             .GetTypes();
 
-        var requestTypes = types
-            .Where(x => x.IsAssignableTo(typeof(IQbRequest)) && x.Name.Contains("Query"))
-            .OrderBy(x => x.Name);
-
-        var testing = typeof(QbListNavBarViewModel<,>)
-            .MakeGenericType(typeof(CustomerQueryRqType), typeof(CustomerQueryRsType));
-
-        foreach(var type in requestTypes)
+        Func<System.Type, string> group = (type) =>
         {
-            _itemCollection.Add(type.Name);
+            var typeName = type.FullName ?? type.Name;
 
-            _menuCollection.Add(new NavBarItemViewModel(
-                type.Name, 
-                type, 
-                MenuViewModelCallBack));
+            if (typeName.EndsWith("RqType"))
+                return typeName.Replace("RqType", "");
+
+            if (typeName.EndsWith("RsType"))
+                return typeName.Replace("RsType", "");
+
+            return typeName;
+        };
+
+        Func<System.Type, bool> isQueryPredicate = (type) =>
+        {
+            return (typeof(IQbRequest).IsAssignableFrom(type) ||
+                typeof(IQbResponse).IsAssignableFrom(type)) &&
+                type.Name.Contains("Query");
+        };
+
+        var qbRequestResponseGroups = assemblyTypes
+            .Where(isQueryPredicate)
+            .GroupBy(group)
+            .ToList();
+
+        foreach (var qbTypeGroup in qbRequestResponseGroups)
+        {
+            var qbRequestType = qbTypeGroup
+                .FirstOrDefault(type => type.IsAssignableTo(typeof(IQbRequest)));
+            var qbResponseType = qbTypeGroup
+                .FirstOrDefault(type => type.IsAssignableTo(typeof(IQbResponse)));
+
+            if (qbRequestType != null && qbResponseType != null)
+            {
+                var navBarType = typeof(GetQbListQuery<,>)
+                    .MakeGenericType(qbRequestType, qbResponseType);
+
+                var navBarInstance = Activator
+                    .CreateInstance(navBarType, [Activator.CreateInstance(qbRequestType)]);
+
+                var name = qbRequestType.Name;
+
+                _menuCollection.Add(new QbListNavBarViewModel(
+                    name.Replace("RqType", ""), 
+                    navBarInstance, 
+                    MenuViewModelCallBack));
+            }
         }
-
-        OnPropertyChanged(nameof(ItemCollection));
         OnPropertyChanged(nameof(MenuCollection));
     }
 
-    public async void MenuViewModelCallBack(System.Type menu)
+    public async void MenuViewModelCallBack(object viewModel, object testing)
     {
-        var response = await _sender.Send(new GetQbListQuery<CustomerQueryRqType, CustomerQueryRsType>(new CustomerQueryRqType()
+        if (viewModel.GetType().IsGenericType &&
+            viewModel.GetType().GetGenericTypeDefinition() == typeof(QbListNavBarViewModel<,>))
+        {
+            var genericArguments = viewModel
+                .GetType()
+                .GetGenericArguments();
+
+            var qbRequestType = genericArguments[0];
+            var qbResponseType = genericArguments[1]; 
+
+            var qbRequestInstance = Activator
+                .CreateInstance(qbRequestType);
+
+            var maxReturnedProperty = qbRequestType
+                .GetProperty("MaxReturned");
+            if (maxReturnedProperty != null)
+            {
+                maxReturnedProperty.SetValue(qbRequestInstance, "100");
+            }
+
+            var queryType = typeof(GetQbListQuery<,>)
+                .MakeGenericType(qbRequestType, qbResponseType);
+            var queryInstance = Activator
+                .CreateInstance(queryType, qbRequestInstance);
+
+            if (queryInstance is not IRequest<IQbResponse<object[]>> request)
+                return;
+
+            var response = await _sender
+                .Send(request);
+
+            var resultItems = response
+                .GetRetResult();
+
+            _itemCollection.Clear();
+            foreach (var item in resultItems)
+            {
+                _itemCollection.Add(item);
+            }
+            OnPropertyChanged(nameof(ItemCollection));
+        }
+    }
+
+    public async void MenuViewModelCallBack(object viewModel)
+    {
+        var query = new GetQbListQuery<InvoiceQueryRqType, InvoiceQueryRsType>(new InvoiceQueryRqType()
         {
             MaxReturned = "100"
-        }));
+        });
+
+        var response = await _sender.Send(viewModel);
 
         _itemCollection.Clear();
-        foreach(var item in response.GetRetResult())
+        if (response is IQbResponse<object[]> qbResponse)
         {
-            _itemCollection.Add(item);
+            var result = qbResponse.GetRetResult();
+            if (result != null)
+            {
+                foreach (var item in result)
+                {
+                    _itemCollection.Add(item);
+                }
+            }
         }
-
         OnPropertyChanged(nameof(ItemCollection));
     }
 
     public List<object> ItemCollection => _itemCollection.ToList();
 
-    public List<NavBarItemViewModel> MenuCollection => _menuCollection.ToList();
+    public List<object> MenuCollection => _menuCollection.ToList();
 }

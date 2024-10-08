@@ -63,7 +63,6 @@ internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to initialize QuickBooks session.");
-            throw;
         }
     }
 

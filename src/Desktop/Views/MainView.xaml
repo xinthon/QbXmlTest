@@ -7,23 +7,102 @@
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:system="clr-namespace:System;assembly=System.Runtime"
-    Width="800"
-    Height="450"
     mc:Ignorable="d"
     Style="{DynamicResource MaterialDesignWindow}"
     Title="{Binding Title}">
+
     <materialDesign:DialogHost DialogTheme="Inherit">
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Height="45"></TextBlock>
-                <Button Height="50" Width="50" Command="{Binding StartServiceCommand}" Style="{DynamicResource MaterialDesignFlatButton}" Content="Start" />
-                <Button Height="50" Width="50" Command="{Binding StopServiceCommand}" Style="{DynamicResource MaterialDesignFlatButton}" Content="Stop" />
+
+            <!-- Sidebar with Buttons -->
+            <StackPanel
+                Grid.Column="0"
+                VerticalAlignment="Stretch"
+                Background="#1E1E1E">
+                <!-- Top Section (like the Teams logo or Activity icon) -->
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#252526" />
+
+                <!-- Navigation Buttons -->
+                <StackPanel
+                    Margin="5 10"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top">
+                    <Button
+                        Width="40"
+                        Height="40"
+                        Padding="0"
+                        Style="{DynamicResource MaterialDesignFlatButton}"
+                        ToolTip="Activity">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Kind="NotificationsActive" />
+                    </Button>
+                    <Button
+                        Width="40"
+                        Height="40"
+                        Padding="0"
+                        Style="{DynamicResource MaterialDesignFlatButton}"
+                        ToolTip="Chat">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Kind="Chat" />
+                    </Button>
+                    <Button
+                        Width="40"
+                        Height="40"
+                        Padding="0"
+                        Style="{DynamicResource MaterialDesignFlatButton}"
+                        ToolTip="Teams">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Kind="MicrosoftTeams" />
+                    </Button>
+                    <Button
+                        Width="40"
+                        Height="40"
+                        Padding="0"
+                        Style="{DynamicResource MaterialDesignFlatButton}"
+                        ToolTip="Planner">
+                        <materialDesign:PackIcon
+                            Width="20"
+                            Height="20"
+                            Kind="ViewDashboard" />
+                    </Button>
+                    <!-- Add more buttons as needed -->
+                </StackPanel>
             </StackPanel>
-            <ContentControl Grid.Column="1" Content="{Binding ActiveView}" />
+
+            <!-- Main Content Area -->
+            <Grid Grid.Column="1" Background="#1E1E1E">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Title or Header of Content (Optional) -->
+                <TextBlock
+                    Grid.Row="0"
+                    Margin="20"
+                    FontSize="16"
+                    Foreground="White"
+                    Text="My Plans" />
+
+                <!-- Content Area with dynamic binding -->
+                <ContentControl
+                    Grid.Row="1"
+                    Margin="5"
+                    Content="{Binding ActiveView}" />
+            </Grid>
         </Grid>
     </materialDesign:DialogHost>
 </Window>
