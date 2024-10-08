@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Application.Commond.Abstractions.Qb;
 using Application.Commond.Abstractions.Services;
 using FluentValidation;
-using Application.Common.Behaviours;
 using Application.Infrastructure.Workers;
 using QbSync.QbXml;
 using QbSync.QbXml.Objects;
@@ -32,10 +31,18 @@ public static class Configuration
         services.AddMediatR(options =>
         {
             options.RegisterServicesFromAssembly(typeof(Configuration).Assembly);
+
+            // Validation should come first to catch any invalid input early.
             options.AddOpenBehavior(typeof(ValidationBehavior<,>));
+
+            // Performance tracking before handling retries and exceptions.
             options.AddOpenBehavior(typeof(PerformanceBehaviour<,>));
-            options.AddOpenBehavior(typeof(UnhandledExceptionBehaviour<,>));
+
+            // Retry logic in case the operation can be retried.
             options.AddOpenBehavior(typeof(RetryBehavior<,>));
+
+            // Catch unhandled exceptions after all retries are exhausted.
+            options.AddOpenBehavior(typeof(UnhandledExceptionBehaviour<,>));
         });
 
         return services;

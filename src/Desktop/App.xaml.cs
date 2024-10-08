@@ -24,9 +24,10 @@ public partial class App : System.Windows.Application
                 config.AddDebug();
                 config.AddConsole();
             })
-            .ConfigureAppConfiguration(config =>
+            .ConfigureAppConfiguration((context, config) =>
             {
                 config.AddJsonFile("appsettings.json", false, true);
+                config.AddEnvironmentVariables();
             })
             .ConfigureServices(ConfigureServices)
             .Build();
