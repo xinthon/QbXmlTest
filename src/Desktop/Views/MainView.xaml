@@ -84,18 +84,7 @@
 
             <!-- Main Content Area -->
             <Grid Grid.Column="1" Background="#1E1E1E">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <!-- Title or Header of Content (Optional) -->
-                <TextBlock
-                    Grid.Row="0"
-                    Margin="20"
-                    FontSize="16"
-                    Foreground="White"
-                    Text="My Plans" />
+                
 
                 <!-- Content Area with dynamic binding -->
                 <ContentControl

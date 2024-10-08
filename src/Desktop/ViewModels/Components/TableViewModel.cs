@@ -4,31 +4,14 @@ using Desktop.Framework;
 using QbSync.QbXml;
 using QbSync.QbXml.Objects;
 using System.Collections.ObjectModel;
-using System;
-using Application.Commond.Abstractions.Qb;
-using System.CodeDom;
 using MediatR;
 using Application.Features.Qb.Queries.GetQbList;
 
 namespace Desktop.ViewModels.Components;
 
-public partial class QbListNavBarViewModel<TQbRequest, TQbResponse> : ViewModelBase
-    where TQbRequest : class, IQbRequest where TQbResponse : IQbResponse
-{
-    private readonly Action<QbListNavBarViewModel<TQbRequest, TQbResponse>> _callBack;
-    public QbListNavBarViewModel(string name, Action<QbListNavBarViewModel<TQbRequest, TQbResponse>> callBack)
-    {
-        _name = name;
-        _callBack = callBack;
-    }
-
-    [ObservableProperty]
-    private string _name;
-
-    [RelayCommand]
-    public void Navigate() => _callBack?.Invoke(this);
-}
-
+/// <summary>
+/// Navigation bar ViewModel for QuickBooks.
+/// </summary>
 public partial class QbListNavBarViewModel : ViewModelBase
 {
     private readonly Action<object> _callBack;
@@ -36,7 +19,7 @@ public partial class QbListNavBarViewModel : ViewModelBase
     public QbListNavBarViewModel(string name, object query, Action<object> callBack)
     {
         _name = name;
-        _query = query; 
+        _query = query;
         _callBack = callBack;
     }
 
@@ -47,6 +30,9 @@ public partial class QbListNavBarViewModel : ViewModelBase
     public void Navigate() => _callBack?.Invoke(_query);
 }
 
+/// <summary>
+/// ViewModel for managing a table view and the corresponding menu options for QuickBooks data.
+/// </summary>
 public partial class TableViewModel : ViewModelBase
 {
     private readonly ObservableCollection<object> _itemCollection =
@@ -55,139 +41,103 @@ public partial class TableViewModel : ViewModelBase
     private readonly ObservableCollection<object> _menuCollection =
         new ObservableCollection<object>();
 
-    private readonly IQbXmlRequestProcessor _requestProcessor;
+    [ObservableProperty]
+    private bool _isLoading;
+
     private readonly ISender _sender;
-    public TableViewModel(IQbXmlRequestProcessor requestProcessor, ISender sender)
+    public TableViewModel(ISender sender)
     {
-        _requestProcessor = requestProcessor;
         _sender = sender;
         InitializeMenuBars();
     }
 
+    /// <summary>
+    /// Initializes the navigation bar menu options for QuickBooks requests.
+    /// </summary>
     private void InitializeMenuBars()
     {
-        var assemblyTypes = typeof(QbXmlRequest)
-            .Assembly
-            .GetTypes();
-
-        Func<System.Type, string> group = (type) =>
-        {
-            var typeName = type.FullName ?? type.Name;
-
-            if (typeName.EndsWith("RqType"))
-                return typeName.Replace("RqType", "");
-
-            if (typeName.EndsWith("RsType"))
-                return typeName.Replace("RsType", "");
-
-            return typeName;
-        };
-
-        Func<System.Type, bool> isQueryPredicate = (type) =>
-        {
-            return (typeof(IQbRequest).IsAssignableFrom(type) ||
-                typeof(IQbResponse).IsAssignableFrom(type)) &&
-                type.Name.Contains("Query");
-        };
+        var assemblyTypes = typeof(QbXmlRequest).Assembly.GetTypes();
 
         var qbRequestResponseGroups = assemblyTypes
-            .Where(isQueryPredicate)
-            .GroupBy(group)
+            .Where(IsQueryType)
+            .GroupBy(GetTypeGroupName)
             .ToList();
 
-        foreach (var qbTypeGroup in qbRequestResponseGroups)
+        foreach (var group in qbRequestResponseGroups)
         {
-            var qbRequestType = qbTypeGroup
-                .FirstOrDefault(type => type.IsAssignableTo(typeof(IQbRequest)));
-            var qbResponseType = qbTypeGroup
-                .FirstOrDefault(type => type.IsAssignableTo(typeof(IQbResponse)));
+            var qbRequestType = group.FirstOrDefault(t => typeof(IQbRequest).IsAssignableFrom(t));
+            var qbResponseType = group.FirstOrDefault(t => typeof(IQbResponse).IsAssignableFrom(t));
 
-            if (qbRequestType != null && qbResponseType != null)
+            if (qbRequestType != null && qbResponseType != null &&
+                qbResponseType.IsAssignableTo(typeof(IQbResponse<object[]>)))
             {
-                var navBarType = typeof(GetQbListQuery<,>)
-                    .MakeGenericType(qbRequestType, qbResponseType);
+                var navBarType = typeof(GetQbListQuery<,>).MakeGenericType(qbRequestType, qbResponseType);
+                var navBarInstance = Activator.CreateInstance(navBarType, Activator.CreateInstance(qbRequestType));
+                var displayName = qbRequestType.Name.Replace("QueryRqType", "");
 
-                var navBarInstance = Activator
-                    .CreateInstance(navBarType, [Activator.CreateInstance(qbRequestType)]);
-
-                var name = qbRequestType.Name;
-
-                _menuCollection.Add(new QbListNavBarViewModel(
-                    name.Replace("RqType", ""), 
-                    navBarInstance, 
-                    MenuViewModelCallBack));
+                _menuCollection.Add(new QbListNavBarViewModel(displayName, navBarInstance!, MenuViewModelCallback));
             }
         }
+
         OnPropertyChanged(nameof(MenuCollection));
     }
 
-    public async void MenuViewModelCallBack(object viewModel, object testing)
+    /// <summary>
+    /// Executes the query and updates the item collection based on the response.
+    /// </summary>
+    /// <param name="query">The query object to send.</param>
+    public async void MenuViewModelCallback(object query)
     {
-        if (viewModel.GetType().IsGenericType &&
-            viewModel.GetType().GetGenericTypeDefinition() == typeof(QbListNavBarViewModel<,>))
+        try
         {
-            var genericArguments = viewModel
-                .GetType()
-                .GetGenericArguments();
+            IsLoading = true;
 
-            var qbRequestType = genericArguments[0];
-            var qbResponseType = genericArguments[1]; 
-
-            var qbRequestInstance = Activator
-                .CreateInstance(qbRequestType);
-
-            var maxReturnedProperty = qbRequestType
-                .GetProperty("MaxReturned");
-            if (maxReturnedProperty != null)
-            {
-                maxReturnedProperty.SetValue(qbRequestInstance, "100");
-            }
-
-            var queryType = typeof(GetQbListQuery<,>)
-                .MakeGenericType(qbRequestType, qbResponseType);
-            var queryInstance = Activator
-                .CreateInstance(queryType, qbRequestInstance);
-
-            if (queryInstance is not IRequest<IQbResponse<object[]>> request)
-                return;
-
-            var response = await _sender
-                .Send(request);
-
-            var resultItems = response
-                .GetRetResult();
+            var response = await Task.Run(() => _sender.Send(query));
 
             _itemCollection.Clear();
-            foreach (var item in resultItems)
+            if (response is IQbResponse<object[]> qbResponse)
             {
-                _itemCollection.Add(item);
+                var result = qbResponse.GetRetResult();
+                if (result != null)
+                {
+                    foreach (var item in result)
+                    {
+                        _itemCollection.Add(item);
+                    }
+                }
             }
+
             OnPropertyChanged(nameof(ItemCollection));
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
-    public async void MenuViewModelCallBack(object viewModel)
+    /// <summary>
+    /// Checks whether a type represents a QuickBooks query.
+    /// </summary>
+    /// <param name="type">The type to evaluate.</param>
+    /// <returns>True if the type is a QuickBooks query, otherwise false.</returns>
+    private static bool IsQueryType(System.Type type) =>
+        (typeof(IQbRequest).IsAssignableFrom(type) || typeof(IQbResponse).IsAssignableFrom(type)) && type.Name.Contains("Query");
+
+    /// <summary>
+    /// Determines the group name for a type based on its suffix.
+    /// </summary>
+    /// <param name="type">The type to evaluate.</param>
+    /// <returns>A string representing the group name.</returns>
+    private static string GetTypeGroupName(System.Type type)
     {
-        var query = new GetQbListQuery<InvoiceQueryRqType, InvoiceQueryRsType>(new InvoiceQueryRqType()
-        {
-            MaxReturned = "100"
-        });
+        var typeName = type.FullName ?? type.Name;
+        if (typeName.EndsWith("RqType"))
+            return typeName.Replace("RqType", "");
+        
+        if (typeName.EndsWith("RsType"))
+            return typeName.Replace("RsType", "");
 
-        var response = await _sender.Send(viewModel);
-
-        _itemCollection.Clear();
-        if (response is IQbResponse<object[]> qbResponse)
-        {
-            var result = qbResponse.GetRetResult();
-            if (result != null)
-            {
-                foreach (var item in result)
-                {
-                    _itemCollection.Add(item);
-                }
-            }
-        }
-        OnPropertyChanged(nameof(ItemCollection));
+        return typeName;
     }
 
     public List<object> ItemCollection => _itemCollection.ToList();
