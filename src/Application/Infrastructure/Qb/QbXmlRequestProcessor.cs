@@ -12,8 +12,13 @@ internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
     private readonly ILogger<QbXmlRequestProcessor> _logger;
     private readonly IConfiguration _config;
     private readonly SemaphoreSlim _semaphore;
-    private string _ticket;
 
+    private readonly string _qbFilePath;
+    private readonly string _appId;
+    private readonly string _appName;
+    
+    private string _ticket = string.Empty;
+ 
     public QbXmlRequestProcessor(IConfiguration config, ILogger<QbXmlRequestProcessor> logger)
     {
         _config = config;
@@ -21,7 +26,15 @@ internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
 
         _requestProcessor = new RequestProcessor3();
         _semaphore = new SemaphoreSlim(1, 1);
-        _ticket = string.Empty;
+
+        _qbFilePath = _config.GetValue<string>("Qb:CompanyFilePath") ?? 
+            throw new ArgumentNullException("Qb:CompanyFilePath is not configured");
+
+        _appId = _config.GetValue<string>("Qb:AppID") ?? 
+            throw new ArgumentNullException("Qb:AppID is not configured");
+
+        _appName = _config.GetValue<string>("Qb:AppName") ?? 
+            throw new ArgumentNullException("Qb:AppName is not configured");
 
         OpenConnection();
     }
@@ -31,69 +44,36 @@ internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
         try
         {
             _logger.LogInformation("Attempting to connect to QuickBooks...");
-
-            var appId = _config.GetValue<string>("Qb:AppID");
-            var appName = _config.GetValue<string>("Qb:AppName");
-
-            if (string.IsNullOrEmpty(appId) || string.IsNullOrEmpty(appName))
-            {
-                throw new InvalidOperationException("AppID or AppName is not configured properly.");
-            }
-
-            _requestProcessor.OpenConnection(appId, appName);
+            _requestProcessor.OpenConnection(_appId, _appName);
             _logger.LogInformation("Successfully connected to QuickBooks.");
-        }
-        catch (Exception ex)
+        } 
+        catch(Exception ex)
         {
             _logger.LogError(ex, "Failed to connect to QuickBooks.");
             throw;
         }
     }
 
-    private void InitSession()
+    public async Task<string> ProcessAsync(string requestXml, CancellationToken cancellationToken = default)
     {
+        if(string.IsNullOrEmpty(requestXml))
+            throw new ArgumentNullException(nameof(requestXml), "Request XML cannot be null or empty.");
+
+        await _semaphore.WaitAsync(cancellationToken);
         try
         {
             _logger.LogInformation("Initializing QuickBooks session...");
-
-            var qbFilePath = _config.GetValue<string>("Qb:CompanyFilePath");
-            _ticket = _requestProcessor.BeginSession(qbFilePath, QBFileMode.qbFileOpenDoNotCare);
+            _ticket = _requestProcessor.BeginSession(_qbFilePath, QBFileMode.qbFileOpenDoNotCare);
             _logger.LogInformation("QuickBooks session started with ticket: {Ticket}", _ticket);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize QuickBooks session.");
-        }
-    }
-
-    public async Task<string> ProcessAsync(string requestXml, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(requestXml))
-        {
-            throw new ArgumentNullException(nameof(requestXml), "Request XML cannot be null or empty.");
-        }
-
-        await _semaphore.WaitAsync(cancellationToken);
-
-        try
-        {
-            if (string.IsNullOrEmpty(_ticket))
-            {
-                InitSession();
-            }
 
             _logger.LogInformation("Processing QuickBooks request.");
-
-            var responseXml = _requestProcessor
-                .ProcessRequest(_ticket, requestXml);
-
+            var responseXml = await Task.Run(() => _requestProcessor.ProcessRequest(_ticket, requestXml));
             _logger.LogInformation("QuickBooks request processed successfully.");
 
             return responseXml;
         }
         catch (COMException ex) when (ex.ErrorCode == unchecked((int)0x8004041D))
         {
-            _ticket = string.Empty;
             _logger.LogWarning("QuickBooks session has expired (error code 0x8004041D).");
             throw;
         }
@@ -104,36 +84,27 @@ internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
         }
         finally
         {
+            if (!string.IsNullOrEmpty(_ticket))
+            {
+                _logger.LogInformation("Ending QuickBooks session.");
+                _requestProcessor.EndSession(_ticket);
+                _logger.LogInformation("QuickBooks session ended successfully.");
+            }
             _semaphore.Release();
         }
     }
 
     public void Dispose()
     {
-        if (!string.IsNullOrEmpty(_ticket))
-        {
-            try
-            {
-                _logger.LogInformation("Ending QuickBooks session.");
-                _requestProcessor.EndSession(_ticket);
-                _logger.LogInformation("QuickBooks session ended successfully.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred while ending QuickBooks session.");
-            }
-        }
-
         try
         {
             _requestProcessor.CloseConnection();
             _logger.LogInformation("QuickBooks connection closed.");
-        }
-        catch (Exception ex)
+        } 
+        catch(Exception ex)
         {
             _logger.LogError(ex, "Error occurred while closing QuickBooks connection.");
         }
-
         _semaphore.Dispose();
     }
 }
