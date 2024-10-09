@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Commond.Abstractions.Qb;
+namespace Application.Common.Abstractions.Qb;
 
 internal interface IQbAuthenticator
 {

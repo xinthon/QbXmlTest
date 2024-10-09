@@ -1,9 +1,9 @@
-﻿using Application.Commond.Behaviours;
-using Application.Infrastructure.Qb;
+﻿using Application.Common.Behaviours;
+using Application.Infrastructure.QuickBooksIntegration;
 using Application.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Application.Commond.Abstractions.Qb;
-using Application.Commond.Abstractions.Services;
+using Application.Common.Abstractions.Qb;
+using Application.Common.Abstractions.Services;
 using FluentValidation;
 using Application.Infrastructure.Workers;
 using QbSync.QbXml;
@@ -51,7 +51,7 @@ public static class Configuration
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
         services.AddHostedService<DataSyncBackgroundService>();
-        services.AddScoped<IQbXmlRequestProcessor, QbXmlRequestProcessor>();
+        services.AddScoped<IQuickBooksXmlService, QuickBooksXmlService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         return services;
     }

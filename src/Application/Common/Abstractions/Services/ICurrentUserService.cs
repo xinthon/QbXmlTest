@@ -1,4 +1,4 @@
-﻿namespace Application.Commond.Abstractions.Services;
+﻿namespace Application.Common.Abstractions.Services;
 
 public interface ICurrentUserService
 {

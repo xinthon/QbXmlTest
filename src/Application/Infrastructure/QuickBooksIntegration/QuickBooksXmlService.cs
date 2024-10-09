@@ -1,15 +1,17 @@
-﻿using Application.Commond.Abstractions.Qb;
+﻿using Application.Common.Abstractions.Qb;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using QbSync.QbXml;
+using QbSync.QbXml.Objects;
 using QBXMLRP2Lib;
 using System.Runtime.InteropServices;
 
-namespace Application.Infrastructure.Qb;
+namespace Application.Infrastructure.QuickBooksIntegration;
 
-internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
+internal class QuickBooksXmlService : IQuickBooksXmlService, IDisposable
 {
     private readonly RequestProcessor3 _requestProcessor;
-    private readonly ILogger<QbXmlRequestProcessor> _logger;
+    private readonly ILogger<QuickBooksXmlService> _logger;
     private readonly IConfiguration _config;
     private readonly SemaphoreSlim _semaphore;
 
@@ -19,7 +21,7 @@ internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
     
     private string _ticket = string.Empty;
  
-    public QbXmlRequestProcessor(IConfiguration config, ILogger<QbXmlRequestProcessor> logger)
+    public QuickBooksXmlService(IConfiguration config, ILogger<QuickBooksXmlService> logger)
     {
         _config = config;
         _logger = logger;
@@ -54,7 +56,7 @@ internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
         }
     }
 
-    public async Task<string> ProcessAsync(string requestXml, CancellationToken cancellationToken = default)
+    public async Task<string> SendRequestAsync(string requestXml, CancellationToken cancellationToken = default)
     {
         if(string.IsNullOrEmpty(requestXml))
             throw new ArgumentNullException(nameof(requestXml), "Request XML cannot be null or empty.");
@@ -63,11 +65,11 @@ internal class QbXmlRequestProcessor : IQbXmlRequestProcessor, IDisposable
         try
         {
             _logger.LogInformation("Initializing QuickBooks session...");
-            _ticket = _requestProcessor.BeginSession(_qbFilePath, QBFileMode.qbFileOpenDoNotCare);
+            _ticket = _requestProcessor.BeginSession(_qbFilePath, QBXMLRP2Lib.QBFileMode.qbFileOpenDoNotCare);
             _logger.LogInformation("QuickBooks session started with ticket: {Ticket}", _ticket);
 
             _logger.LogInformation("Processing QuickBooks request.");
-            var responseXml = await Task.Run(() => _requestProcessor.ProcessRequest(_ticket, requestXml));
+            var responseXml = await Task.Run(() => _requestProcessor.ProcessRequest(_ticket, requestXml), cancellationToken);
             _logger.LogInformation("QuickBooks request processed successfully.");
 
             return responseXml;

@@ -1,9 +1,9 @@
-﻿using Application.Commond.Abstractions.Services;
+﻿using Application.Common.Abstractions.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
-namespace Application.Commond.Behaviours;
+namespace Application.Common.Behaviours;
 
 public class PerformanceBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IRequest<TResponse>
