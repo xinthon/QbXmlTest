@@ -4,5 +4,5 @@ namespace Application.Common.Abstractions.Qb;
 
 public interface IQuickBooksXmlService
 {
-    Task<string> SendRequestAsync(string responXml, CancellationToken cancellation = default);
+    Task<string> SendRequestAsync(string requestXml, CancellationToken cancellation = default);
 }
