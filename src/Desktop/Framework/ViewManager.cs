@@ -16,6 +16,7 @@ public class ViewManager
         {
             MainViewModel => new MainView(),
             TableViewModel => new TableView(),
+            SettingsViewModel => new SettingsView(),
             MessageBoxViewModel => new MessageBoxView(),
             _ => null,
         };

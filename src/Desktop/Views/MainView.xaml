@@ -30,7 +30,7 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.Effect>
-                    <DropShadowEffect Color="Black" ShadowDepth="0.1"/>
+                    <DropShadowEffect Color="Black" ShadowDepth="0.1" />
                 </Grid.Effect>
                 <!-- Top Section (like the Teams logo or Activity icon) -->
                 <StackPanel
@@ -82,9 +82,10 @@
                     <Button
                         Width="40"
                         Height="40"
+                        Command="{Binding ShowListCommand}"
                         Padding="0"
                         Style="{DynamicResource MaterialDesignFlatButton}"
-                        ToolTip="Planner">
+                        ToolTip="Lists">
                         <materialDesign:PackIcon
                             Width="20"
                             Height="20"
@@ -100,6 +101,7 @@
                     <Button
                         Width="40"
                         Height="40"
+                        Command="{Binding ShowSettingsCommand}"
                         Padding="0"
                         Style="{DynamicResource MaterialDesignFlatButton}"
                         ToolTip="Planner">

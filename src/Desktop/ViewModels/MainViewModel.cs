@@ -39,7 +39,6 @@ public partial class MainViewModel : ViewModelBase
     {
         await _hostedService
             .StopAsync(CancellationToken.None);
-        await Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -47,7 +46,20 @@ public partial class MainViewModel : ViewModelBase
     {
         await _hostedService
             .StartAsync(CancellationToken.None);
-        await Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private void ShowSettings()
+    {
+        _viewModelManager
+            .NavigateTo<SettingsViewModel>();
+    }
+
+    [RelayCommand]
+    private void ShowList()
+    {
+        _viewModelManager
+            .NavigateTo<TableViewModel>();
     }
 
     [ObservableProperty]
@@ -56,7 +68,7 @@ public partial class MainViewModel : ViewModelBase
     private void OnViewModelChanged(ViewModelBase viewModel)
     {
         var view = _viewHistory
-            .FirstOrDefault(x => x.DataContext == viewModel);
+            .FirstOrDefault(x => x.DataContext.GetType() == viewModel.GetType());
 
         if (view is null)
         {
@@ -66,7 +78,7 @@ public partial class MainViewModel : ViewModelBase
                 _viewHistory.Add(view);
             }
         }
-
+       
         ActiveView = view;
         OnPropertyChanged(nameof(ActiveView));
     }
