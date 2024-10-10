@@ -15,7 +15,7 @@ public class ViewManager
         return viewModel switch
         {
             MainViewModel => new MainView(),
-            TableViewModel => new TableView(),
+            QbListViewModel => new QbListView(),
             SettingsViewModel => new SettingsView(),
             MessageBoxViewModel => new MessageBoxView(),
             _ => null,

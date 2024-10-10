@@ -31,7 +31,7 @@ public partial class MainViewModel : ViewModelBase
         _hostedService = hostedService;
 
         _viewModelManager.SubscribeOnViewModelChanged(OnViewModelChanged);
-        _viewModelManager.NavigateTo<TableViewModel>();
+        _viewModelManager.NavigateTo<QbListViewModel>();
     }
 
     [RelayCommand]
@@ -59,7 +59,7 @@ public partial class MainViewModel : ViewModelBase
     private void ShowList()
     {
         _viewModelManager
-            .NavigateTo<TableViewModel>();
+            .NavigateTo<QbListViewModel>();
     }
 
     [ObservableProperty]

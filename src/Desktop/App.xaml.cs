@@ -44,11 +44,8 @@ public partial class App : System.Windows.Application
         services.AddSingleton<ViewManager>();
         services.AddSingleton<ViewModelManager>();
 
-
         // ViewModels
         services.AddTransient<MainViewModel>();
-        services.AddTransient<TableViewModel>();
-        services.AddTransient<MessageBoxViewModel>();
     }
 
     protected override async void OnStartup(StartupEventArgs e)

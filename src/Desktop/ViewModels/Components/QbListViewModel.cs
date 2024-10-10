@@ -33,7 +33,7 @@ public partial class QbListNavBarViewModel : ViewModelBase
 /// <summary>
 /// ViewModel for managing a table view and the corresponding menu options for QuickBooks data.
 /// </summary>
-public partial class TableViewModel : ViewModelBase
+public partial class QbListViewModel : ViewModelBase
 {
     private readonly ObservableCollection<object> _itemCollection =
         new ObservableCollection<object>();
@@ -45,7 +45,7 @@ public partial class TableViewModel : ViewModelBase
     private bool _isLoading;
 
     private readonly ISender _sender;
-    public TableViewModel(ISender sender)
+    public QbListViewModel(ISender sender)
     {
         _sender = sender;
         InitializeMenuBars();

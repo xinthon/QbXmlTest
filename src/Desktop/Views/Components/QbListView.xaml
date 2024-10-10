@@ -1,5 +1,5 @@
 ﻿<UserControl
-    x:Class="Desktop.Views.Components.TableView"
+    x:Class="Desktop.Views.Components.QbListView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:converters="clr-namespace:Desktop.Converters"
@@ -21,7 +21,7 @@
             Margin="15 20"
             FontSize="16"
             Foreground="White"
-            Text="My Plans" />
+            Text="Qb Lists" />
         
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>

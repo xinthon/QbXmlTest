@@ -18,9 +18,9 @@ namespace Desktop.Views.Components
     /// <summary>
     /// Interaction logic for TableView.xaml
     /// </summary>
-    public partial class TableView : UserControl
+    public partial class QbListView : UserControl
     {
-        public TableView()
+        public QbListView()
         {
             InitializeComponent();
         }
