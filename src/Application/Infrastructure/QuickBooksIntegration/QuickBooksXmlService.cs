@@ -18,9 +18,9 @@ internal class QuickBooksXmlService : IQuickBooksXmlService, IDisposable
     private readonly string _qbFilePath;
     private readonly string _appId;
     private readonly string _appName;
-    
+
     private string _ticket = string.Empty;
- 
+
     public QuickBooksXmlService(IConfiguration config, ILogger<QuickBooksXmlService> logger)
     {
         _config = config;
@@ -29,13 +29,13 @@ internal class QuickBooksXmlService : IQuickBooksXmlService, IDisposable
         _requestProcessor = new RequestProcessor3();
         _semaphore = new SemaphoreSlim(1, 1);
 
-        _qbFilePath = _config.GetValue<string>("Qb:CompanyFilePath") ?? 
+        _qbFilePath = _config.GetValue<string>("Qb:CompanyFilePath") ??
             throw new ArgumentNullException("Qb:CompanyFilePath is not configured");
 
-        _appId = _config.GetValue<string>("Qb:AppID") ?? 
+        _appId = _config.GetValue<string>("Qb:AppID") ??
             throw new ArgumentNullException("Qb:AppID is not configured");
 
-        _appName = _config.GetValue<string>("Qb:AppName") ?? 
+        _appName = _config.GetValue<string>("Qb:AppName") ??
             throw new ArgumentNullException("Qb:AppName is not configured");
 
         OpenConnection();
@@ -48,7 +48,7 @@ internal class QuickBooksXmlService : IQuickBooksXmlService, IDisposable
             _logger.LogInformation("Attempting to connect to QuickBooks...");
             _requestProcessor.OpenConnection(_appId, _appName);
             _logger.LogInformation("Successfully connected to QuickBooks.");
-        } 
+        }
         catch(Exception ex)
         {
             _logger.LogError(ex, "Failed to connect to QuickBooks.");
@@ -102,7 +102,7 @@ internal class QuickBooksXmlService : IQuickBooksXmlService, IDisposable
         {
             _requestProcessor.CloseConnection();
             _logger.LogInformation("QuickBooks connection closed.");
-        } 
+        }
         catch(Exception ex)
         {
             _logger.LogError(ex, "Error occurred while closing QuickBooks connection.");
